@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Offshore Sportfishing Intel — Stuart, FL</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-velocity@1.7.0/dist/leaflet-velocity.min.css" />
+<style>
+  :root{--panel:#0e1726;--panel2:#16233a;--ink:#e8eef7;--muted:#93a4bd;
+        --line:#26364f;--accent:#3fb6ff;--good:#4ade80;--bad:#ff6b6b}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#05080f;color:var(--ink)}
+  #app{display:flex;height:100vh;overflow:hidden}
+  #map{flex:1;height:100%;background:#05080f}
+  #panel{width:330px;min-width:330px;height:100%;overflow-y:auto;background:var(--panel);border-right:1px solid var(--line);padding:16px 16px 40px}
+  h1{font-size:16px;margin:0 0 2px;letter-spacing:.2px}
+  .sub{font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.4}
+  .group{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px}
+  .group h2{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}
+  .row{display:flex;align-items:center;gap:8px;margin:9px 0}
+  .row label{flex:1;font-size:13px;cursor:pointer;user-select:none}
+  .row .swatch{width:12px;height:12px;border-radius:3px;flex:none}
+  input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;height:18px}
+  .op{margin:0 0 6px 22px;display:flex;align-items:center;gap:8px}
+  .op input{flex:1}
+  .op small{color:var(--muted);font-size:10px;white-space:nowrap;width:30px;text-align:right}
+  /* toggle switch: the checkbox itself is the full clickable surface */
+  .sw{position:relative;width:38px;height:22px;flex:none}
+  .sw input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer;z-index:3}
+  .track{position:absolute;inset:0;background:#2b3b57;border-radius:22px;transition:.15s;pointer-events:none}
+  .thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:.15s;pointer-events:none}
+  .sw input:checked ~ .track{background:var(--accent)}
+  .sw input:checked ~ .thumb{transform:translateX(16px)}
+  .radio{display:flex;align-items:center;gap:8px;margin:7px 0;font-size:13px;cursor:pointer}
+  .radio input{accent-color:var(--accent);width:15px;height:15px}
+  .date{display:flex;gap:8px;align-items:center}
+  .date input{background:#0b1526;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 7px;font-size:12px;flex:1}
+  button.step{background:#0b1526;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 9px;cursor:pointer;font-size:12px}
+  button.step:hover{border-color:var(--accent)}
+  .legend{font-size:11px;color:var(--muted);line-height:1.5}
+  .bar{height:10px;border-radius:3px;margin:3px 0 6px}
+  .sst-bar{background:linear-gradient(90deg,#3b2fff,#00c2ff,#00ffa3,#faff00,#ff7a00,#ff1e1e)}
+  .chl-bar{background:linear-gradient(90deg,#0b3d2e,#137a4d,#8ed94f,#eaff8a)}
+  .note{font-size:11px;color:var(--muted);line-height:1.45;margin-top:6px}
+  .pill{display:inline-block;font-size:10px;background:#0b1526;border:1px solid var(--line);border-radius:20px;padding:2px 8px;margin-top:0}
+  a{color:var(--accent)}
+  .leaflet-popup-content{font-size:12px}
+  .footer{font-size:10px;color:#5a6b85;margin-top:8px;line-height:1.4}
+  #banner{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:1000;
+    display:none;max-width:70%;background:#3a1116;border:1px solid #ff6b6b;color:#ffdede;
+    padding:9px 14px;border-radius:8px;font-size:12.5px;box-shadow:0 4px 18px rgba(0,0,0,.4)}
+  #banner b{color:#fff}
+  #banner .x{margin-left:10px;cursor:pointer;color:#ff9b9b;font-weight:bold}
+  .spot-tip{background:rgba(16,26,44,.82);border:1px solid #ff8c1a;color:#ffd9a8;font-size:10px;
+    font-weight:600;padding:1px 5px;border-radius:4px;box-shadow:none;white-space:nowrap}
+  .spot-tip:before{display:none !important}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="panel">
+    <h1>🎣 Offshore Sportfishing Intel</h1>
+    <div class="sub">US East Coast · satellite basemap with toggleable NOAA ocean layers. All free public data. Prototype — verify before running offshore.</div>
+
+    <div class="group">
+      <h2>Region</h2>
+      <select id="region" style="width:100%;background:#0b1526;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:13px"></select>
+      <div class="note" id="regnote"></div>
+    </div>
+
+    <div class="group">
+      <h2>Imagery date</h2>
+      <div class="date">
+        <button class="step" id="prev">◀</button>
+        <input type="date" id="datepick" />
+        <button class="step" id="next">▶</button>
+      </div>
+      <div class="note">SST/chlorophyll lag ~1–2 days; clouds leave gaps. Step back a day if a layer looks sparse.</div>
+    </div>
+
+    <div class="group">
+      <h2>Base map</h2>
+      <label class="radio"><input type="radio" name="base" value="esri" checked> Satellite — Esri (highest detail, cloud-free)</label>
+      <label class="radio"><input type="radio" name="base" value="clarity"> Satellite — Esri Clarity (sharper coastal)</label>
+      <label class="radio"><input type="radio" name="base" value="s2"> Satellite — Sentinel-2 cloudless (10 m)</label>
+      <label class="radio"><input type="radio" name="base" value="nasa"> Satellite — daily pass (NASA, shows clouds/weather)</label>
+      <label class="radio"><input type="radio" name="base" value="ocean"> Ocean / bathymetry — Esri</label>
+      <label class="radio"><input type="radio" name="base" value="dark"> Dark (minimal)</label>
+      <div class="note">Esri is the best free high-detail option (Google's tiles aren't free to overlay). Cloud-free mosaics have no weather; use the NASA daily pass to see today's clouds, sargassum and water color.</div>
+    </div>
+
+    <div class="group">
+      <h2>Bottom structure</h2>
+      <div class="row">
+        <span class="swatch" style="background:#6fd3ff"></span>
+        <label for="charts">Nautical charts (NOAA ENC)</label>
+        <span class="sw"><input type="checkbox" id="charts"><span class="track"></span><span class="thumb"></span></span>
+      </div>
+      <div class="op"><input type="range" min="0" max="100" value="85" id="charts_op"><small id="charts_v">85%</small></div>
+      <div class="row">
+        <span class="swatch" style="background:#7cc4ff"></span>
+        <label for="bathy">Depth contours (GEBCO)</label>
+        <span class="sw"><input type="checkbox" id="bathy"><span class="track"></span><span class="thumb"></span></span>
+      </div>
+      <div class="op"><input type="range" min="0" max="100" value="55" id="bathy_op"><small id="bathy_v">55%</small></div>
+      <div class="note">NOAA ENC shows charted depth contours, soundings and ledges — the bottom structure that funnels bait. Toggle down the SST layer to read it. <b>Click anywhere on the water</b> to read exact depth (ft / fathoms).</div>
+    </div>
+
+    <div class="group">
+      <h2>Ocean layers <span id="bkstatus" class="pill" style="color:#ff9b6b">● backend…</span></h2>
+
+      <div class="row">
+        <span class="swatch" style="background:#ff4d4d"></span>
+        <label for="sst">Sea surface temp</label>
+        <span class="sw"><input type="checkbox" id="sst" checked><span class="track"></span><span class="thumb"></span></span>
+      </div>
+      <div class="op"><input type="range" min="0" max="100" value="75" id="sst_op"><small id="sst_v">75%</small></div>
+
+      <div class="row">
+        <span class="swatch" style="background:#8ed94f"></span>
+        <label for="chl">Chlorophyll (color/bait)</label>
+        <span class="sw"><input type="checkbox" id="chl"><span class="track"></span><span class="thumb"></span></span>
+      </div>
+      <div class="op"><input type="range" min="0" max="100" value="75" id="chl_op"><small id="chl_v">75%</small></div>
+
+      <div class="row">
+        <span class="swatch" style="background:#e35d9c"></span>
+        <label for="ssh">Eddies (sea-surface height)</label>
+        <span class="sw"><input type="checkbox" id="ssh"><span class="track"></span><span class="thumb"></span></span>
+      </div>
+      <div class="op"><input type="range" min="0" max="100" value="70" id="ssh_op"><small id="ssh_v">70%</small></div>
+
+      <div class="row">
+        <span class="swatch" style="background:#bfefff"></span>
+        <label for="cur">Currents (animated flow)</label>
+        <span class="sw"><input type="checkbox" id="cur" checked><span class="track"></span><span class="thumb"></span></span>
+      </div>
+      <div class="note">Currents render as smooth flowing motion so you can read the rips and edges of the Stream.</div>
+    </div>
+
+    <div class="group">
+      <h2>Derived intel</h2>
+      <div class="row">
+        <span class="swatch" style="background:#ff2d95"></span>
+        <label for="bait">Bait / edge finder</label>
+        <span class="sw"><input type="checkbox" id="bait"><span class="track"></span><span class="thumb"></span></span>
+      </div>
+      <div class="op"><input type="range" min="0" max="100" value="85" id="bait_op"><small id="bait_v">85%</small></div>
+      <div class="note">Composite of SST fronts + chlorophyll edges + eddies. Bright pink = strongest edges = likeliest bait.</div>
+    </div>
+
+    <div class="group">
+      <h2>Fishing spots &amp; areas</h2>
+      <div class="row">
+        <span class="swatch" style="background:#ff8c1a"></span>
+        <label for="spots">Named grounds, canyons &amp; wrecks</label>
+        <span class="sw"><input type="checkbox" id="spots" checked><span class="track"></span><span class="thumb"></span></span>
+      </div>
+      <div class="note">Well-known offshore grounds for the selected region — canyons, lumps, shoals, reefs and inlets. Click a marker for detail. Charted place names also appear on the NOAA ENC layer.</div>
+    </div>
+
+    <div class="group">
+      <h2>Markers &amp; zones</h2>
+      <div class="row">
+        <span class="swatch" style="background:#ffd000"></span>
+        <label for="buoys">NDBC buoys (live links)</label>
+        <span class="sw"><input type="checkbox" id="buoys" checked><span class="track"></span><span class="thumb"></span></span>
+      </div>
+      <div class="row">
+        <span class="swatch" style="background:#00e0ff"></span>
+        <label for="aoi">Target area + inlet</label>
+        <span class="sw"><input type="checkbox" id="aoi" checked><span class="track"></span><span class="thumb"></span></span>
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Legend</h2>
+      <div class="legend">
+        <strong>SST</strong> cool → warm<div class="bar sst-bar"></div>
+        <strong>Chlorophyll</strong> clear → green/bait<div class="bar chl-bar"></div>
+        <div class="note">Tight <em>temperature breaks</em> + <em>color edges</em> along the Gulf Stream = where bait and sailfish stack.</div>
+      </div>
+    </div>
+
+    <div class="footer" id="srcline">
+      Sources: NASA GIBS · Esri Ocean · NOAA ENC charts · NOAA CoastWatch (SST/chl) · NOAA/NESDIS altimetry (SSH + currents) · GEBCO · ETOPO1 · NOAA NDBC. All free.
+    </div>
+  </div>
+  <div id="map">
+    <div id="banner"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-velocity@1.7.0/dist/leaflet-velocity.min.js"></script>
+<script>
+(function(){
+  // Deployed (served over http/https): the same server hosts the API -> same origin.
+  // Opened as a local file:// : talk to the local backend on port 8000.
+  const BACKEND = location.protocol.startsWith('http')
+      ? location.origin
+      : 'http://127.0.0.1:8000';
+
+  // ---------- regions (add more here; the backend is fully bbox-driven) ----------
+  // oceanBounds = broad NOAA overlay coverage; aoiRect = rough target box.
+  const REGIONS = {
+    stuart: {
+      name:'Stuart, FL (Treasure Coast)',
+      center:[27.25,-79.75], zoom:9,
+      oceanBounds:[[25.7,-80.35],[28.6,-77.4]],
+      aoiRect:[[27.0,-80.1],[27.5,-79.4]],
+      note:'Gulf Stream runs close — sailfish, mahi, wahoo, kingfish. The edge is often 10–25 mi out.',
+      inlet:{name:'St. Lucie Inlet', lat:27.165, lon:-80.155},
+      buoys:[
+        ['41114',27.551,-80.225,'Fort Pierce'],
+        ['41009',28.508,-80.185,'Canaveral 20NM'],
+        ['LKWF1',26.613,-80.034,'Lake Worth Pier'],
+      ],
+      spots:[
+        {n:'~120 ft Ledge', lat:27.19, lon:-80.10, t:'Structure ~5 mi off Stuart; funnels bait'},
+        {n:'Sailfish Alley (edge)', lat:27.22, lon:-79.85, t:'Troll the temp/color break, approx'},
+        {n:'Push Button Hill', lat:27.18, lon:-79.92, t:'Popular sailfish ground (approx)'},
+        {n:'Gulf Stream edge', lat:27.25, lon:-79.55, t:'Warm blue water; watch SST + chlorophyll break'},
+      ],
+    },
+    oceancity: {
+      name:'Ocean City, MD',
+      center:[38.05,-74.25], zoom:8,
+      oceanBounds:[[36.4,-75.4],[39.0,-72.0]],
+      aoiRect:[[37.6,-75.0],[38.5,-73.5]],
+      note:'Canyons 50–70 nm out — tuna, white/blue marlin, mahi. Jackspot & lumps hold fish closer in.',
+      inlet:{name:'Ocean City Inlet', lat:38.317, lon:-75.083},
+      buoys:[
+        ['44009',38.457,-74.702,'Delaware Bay 26NM SE'],
+        ['44014',36.611,-74.842,'Virginia Beach 64NM'],
+        ['44100',38.075,-74.840,'OC Nearshore (approx)'],
+      ],
+      spots:[
+        {n:'Jackspot', lat:38.0867, lon:-74.7517, t:'Shoal ~20 mi out; early tuna, blues, marker for the run'},
+        {n:"Poor Man's Canyon", lat:38.05, lon:-74.03, t:'Closest canyon (~53 nm), approx tip'},
+        {n:'Baltimore Canyon', lat:38.245, lon:-73.843, t:'100-fathom tip; tuna / marlin / mahi'},
+        {n:'Washington Canyon', lat:37.487, lon:-74.508, t:'100-fathom tip; southern run'},
+        {n:'Wilmington Canyon', lat:38.388, lon:-73.540, t:'500-fathom tip; northern canyon'},
+      ],
+    },
+  };
+  const DEFAULT_REGION = 'stuart';
+  let region = DEFAULT_REGION;
+  let dataBounds = REGIONS[region].oceanBounds;      // updated by applyRegion()
+  let aoiLayer=null, buoysLayer=null, spotsLayer=null;
+
+  const map = L.map('map',{minZoom:3,maxZoom:16,zoomControl:true})
+    .setView(REGIONS[region].center, REGIONS[region].zoom);
+  const fmt = d => d.toISOString().slice(0,10);
+  let current = new Date(Date.now() - 2*86400000);
+
+  // ---------- date ----------
+  const picker = document.getElementById('datepick');
+  picker.value = fmt(current); picker.max = fmt(new Date());
+
+  // ---------- base maps ----------
+  const bases = {
+    dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      {subdomains:'abcd',maxZoom:19,attribution:'© CARTO'}),
+    ocean: L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
+      {maxZoom:13,attribution:'Esri Ocean'}),
+    esri: L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      {maxZoom:19,attribution:'Esri, Maxar, Earthstar Geographics'}),   // cloud-free mosaic
+    clarity: L.tileLayer('https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      {maxZoom:19,attribution:'Esri Clarity, Maxar'}),
+    s2: L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023_3857/default/g/{z}/{y}/{x}.jpg',
+      {maxZoom:16,attribution:'Sentinel-2 cloudless 2023 — s2maps.eu by EOX (Copernicus)'}),
+    nasa: null // GIBS daily true color, built per-date below
+  };
+  function gibs(layer,matrix,ext,maxNative){
+    return L.tileLayer(`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layer}/default/{time}/${matrix}/{z}/{y}/{x}.${ext}`,
+      {time:fmt(current),maxNativeZoom:maxNative,maxZoom:12,tileSize:256,
+       bounds:[[-85,-180],[85,180]],attribution:'NASA GIBS'});
+  }
+  bases.nasa = gibs('VIIRS_SNPP_CorrectedReflectance_TrueColor','GoogleMapsCompatible_Level9','jpg',8);
+  // Esri ocean reference labels (depth numbers) sit above ocean base
+  const oceanRef = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}',
+      {maxZoom:13,attribution:'Esri'});
+
+  let activeBase = bases.esri.addTo(map);
+  function setBase(key){
+    if(activeBase) map.removeLayer(activeBase);
+    if(map.hasLayer(oceanRef)) map.removeLayer(oceanRef);
+    activeBase = bases[key].addTo(map);
+    if(key==='ocean') oceanRef.addTo(map);
+    activeBase.bringToBack();
+  }
+  document.querySelectorAll('input[name=base]').forEach(r=>{
+    r.addEventListener('change',e=>{ if(e.target.checked) setBase(e.target.value); });
+  });
+
+  // ---------- bottom-structure tile overlays ----------
+  const charts = L.tileLayer('https://tileservice.charts.noaa.gov/tiles/50000_1/{z}/{x}/{y}.png',
+      {maxZoom:18,opacity:0.85,attribution:'NOAA ENC'});
+  const bathy = L.tileLayer.wms('https://wms.gebco.net/mapserv?',
+      {layers:'GEBCO_LATEST',format:'image/png',transparent:true,version:'1.3.0',
+       opacity:0.55,attribution:'GEBCO 2026'});
+
+  // ---------- backend image overlays (SST / chl / ssh / composite) ----------
+  function bboxParams(){ const [[s,w],[n,e]]=dataBounds; return `s=${s}&w=${w}&n=${n}&e=${e}`; }
+  // no cache-buster: stable URL per date+region lets the browser cache tiles,
+  // so toggling a layer off/on is instant instead of re-fetching.
+  function boURL(path){ return `${BACKEND}/${path}?date=${fmt(current)}&${bboxParams()}`; }
+  const overlays = {};            // id -> {path, opacity, layer}
+  function defBO(id,path,op){ overlays[id] = {path:path, opacity:op, layer:null}; }
+  defBO('sst','sst.png',0.75);
+  defBO('chl','chl.png',0.75);
+  defBO('ssh','ssh.png',0.70);
+  defBO('bait','composite.png',0.85);
+  function showBO(id){
+    const o = overlays[id];
+    if(o.layer) map.removeLayer(o.layer);
+    o.layer = L.imageOverlay(boURL(o.path), dataBounds, {opacity:o.opacity});
+    setLoading(1);
+    o.layer.on('load', ()=> setLoading(-1));
+    o.layer.on('error', ()=>{ setLoading(-1); flagOffline(); showBanner(); });
+    o.layer.addTo(map);
+  }
+  function hideBO(id){ const o=overlays[id]; if(o.layer){map.removeLayer(o.layer);o.layer=null;} }
+
+  // ---------- animated currents (leaflet-velocity) ----------
+  let velocity = null;
+  function showCurrents(){
+    setLoading(1);
+    fetch(boURL('currents.json'))
+      .then(r=>r.json()).then(data=>{
+        setLoading(-1);
+        if(velocity) map.removeLayer(velocity);
+        velocity = L.velocityLayer({
+          displayValues:true,
+          displayOptions:{velocityType:'Current',position:'bottomleft',
+            emptyString:'No current data',speedUnit:'k/h',
+            displayPosition:'bottomleft',displayEmptyString:'No current data'},
+          data:data,
+          maxVelocity:2.5, velocityScale:0.02,
+          colorScale:['#a9f6ff','#7fe0ff','#5cc8ff','#ffffff']
+        }).addTo(map);
+      }).catch(()=>{ setLoading(-1); document.getElementById('cur').checked=false; flagOffline(); showBanner(); });
+  }
+  function hideCurrents(){ if(velocity){map.removeLayer(velocity);velocity=null;} }
+
+  // ---------- backend health + offline banner ----------
+  const bk = document.getElementById('bkstatus');
+  const banner = document.getElementById('banner');
+  function showBanner(){
+    banner.innerHTML = '<b>Ocean layers need the backend.</b> SST, chlorophyll, eddies, currents and bait/edge load from the local service. '+
+      'Double-click <b>Launch Offshore Sportfishing Intel.command</b> in the project folder, then reload this page.'+
+      '<span class="x" onclick="this.parentNode.style.display=\'none\'">✕</span>';
+    banner.style.display='block';
+  }
+  function hideBanner(){ banner.style.display='none'; }
+  let pending=0, online=false;
+  function flagOnline(){ online=true; if(pending<=0){bk.textContent='● backend online'; bk.style.color='var(--good)';} hideBanner(); }
+  function flagOffline(){ online=false; bk.textContent='● backend offline'; bk.style.color='var(--bad)'; }
+  function setLoading(d){
+    pending=Math.max(0,pending+d);
+    if(pending>0){ bk.textContent='● loading data…'; bk.style.color='#ffcf6b'; }
+    else if(online){ bk.textContent='● backend online'; bk.style.color='var(--good)'; }
+  }
+  fetch(BACKEND+'/health').then(r=>r.ok?r.json():Promise.reject())
+    .then(()=>flagOnline())
+    .catch(()=>{ flagOffline(); showBanner(); });
+
+  // ---------- generic toggle + opacity wiring ----------
+  function onToggle(id, on, off){
+    const el=document.getElementById(id);
+    el.addEventListener('change',e=> e.target.checked ? on() : off());
+    if(el.checked) on();               // honor default-checked
+  }
+  function onOpacity(id, apply){
+    const el=document.getElementById(id);
+    const label=document.getElementById(id.replace('_op','')+'_v');
+    el.addEventListener('input',e=>{
+      const v=+e.target.value; if(label) label.textContent=v+'%'; apply(v/100);
+    });
+  }
+
+  // tile overlays
+  onToggle('charts',()=>charts.addTo(map),()=>map.removeLayer(charts));
+  onOpacity('charts_op',v=>charts.setOpacity(v));
+  onToggle('bathy',()=>bathy.addTo(map),()=>map.removeLayer(bathy));
+  onOpacity('bathy_op',v=>bathy.setOpacity(v));
+
+  // backend rasters
+  ['sst','chl','ssh','bait'].forEach(id=>{
+    onToggle(id,()=>showBO(id),()=>hideBO(id));
+    onOpacity(id+'_op',v=>{ overlays[id].opacity=v; if(overlays[id].layer) overlays[id].layer.setOpacity(v); });
+  });
+
+  // currents
+  onToggle('cur',showCurrents,hideCurrents);
+
+  // ---------- region-driven markers / buoys / fishing spots ----------
+  function buildAOI(reg){
+    const items=[ L.rectangle(reg.aoiRect,{color:'#00e0ff',weight:1.5,fill:false,dashArray:'5,5'})
+        .bindPopup(`<b>${reg.name}</b><br>Rough target area. Ocean overlays extend beyond this box.`) ];
+    if(reg.inlet) items.push(
+      L.marker([reg.inlet.lat,reg.inlet.lon]).bindPopup(`<b>${reg.inlet.name}</b><br>Run out from here.`));
+    return L.layerGroup(items);
+  }
+  function buildBuoys(reg){
+    return L.layerGroup((reg.buoys||[]).map(([id,lat,lon,name])=>
+      L.circleMarker([lat,lon],{radius:6,color:'#ffd000',weight:2,fillColor:'#ffd000',fillOpacity:.5})
+        .bindPopup(`<b>NDBC ${id}</b> — ${name}<br><a href="https://www.ndbc.noaa.gov/station_page.php?station=${id}" target="_blank">Live wind/wave/water temp ▸</a>`)));
+  }
+  function buildSpots(reg){
+    return L.layerGroup((reg.spots||[]).map(s=>
+      L.circleMarker([s.lat,s.lon],{radius:5,color:'#ff8c1a',weight:2,fillColor:'#ffb84d',fillOpacity:.9})
+        .bindTooltip(s.n,{permanent:true,direction:'right',className:'spot-tip',offset:[6,0]})
+        .bindPopup(`<b>${s.n}</b><br>${s.t||''}<br><small>${s.lat.toFixed(3)}, ${s.lon.toFixed(3)}</small>`)));
+  }
+
+  function applyRegion(key, reload){
+    region=key; const reg=REGIONS[key];
+    dataBounds=reg.oceanBounds;
+    document.getElementById('regnote').textContent=reg.note;
+    [aoiLayer,buoysLayer,spotsLayer].forEach(l=>{ if(l&&map.hasLayer(l)) map.removeLayer(l); });
+    aoiLayer=buildAOI(reg); buoysLayer=buildBuoys(reg); spotsLayer=buildSpots(reg);
+    if(document.getElementById('aoi').checked)   aoiLayer.addTo(map);
+    if(document.getElementById('buoys').checked) buoysLayer.addTo(map);
+    if(document.getElementById('spots').checked) spotsLayer.addTo(map);
+    map.setView(reg.center, reg.zoom);
+    if(reload){
+      ['sst','chl','ssh','bait'].forEach(id=>{ if(overlays[id].layer) showBO(id); });
+      if(document.getElementById('cur').checked) showCurrents();
+    }
+  }
+
+  // region dropdown
+  const regSel=document.getElementById('region');
+  Object.entries(REGIONS).forEach(([k,r])=>{ const o=document.createElement('option'); o.value=k; o.textContent=r.name; regSel.appendChild(o); });
+  regSel.value=DEFAULT_REGION;
+  regSel.addEventListener('change',()=>applyRegion(regSel.value,true));
+
+  // marker toggles (applyRegion does the initial placement per checkbox)
+  document.getElementById('aoi').addEventListener('change',  e=> e.target.checked?aoiLayer.addTo(map):map.removeLayer(aoiLayer));
+  document.getElementById('buoys').addEventListener('change',e=> e.target.checked?buoysLayer.addTo(map):map.removeLayer(buoysLayer));
+  document.getElementById('spots').addEventListener('change',e=> e.target.checked?spotsLayer.addTo(map):map.removeLayer(spotsLayer));
+
+  applyRegion(DEFAULT_REGION, false);   // build + place initial region layers
+
+  // ---------- date change: refresh everything time-dependent ----------
+  function applyDate(){
+    if(map.hasLayer(bases.nasa)){ bases.nasa.options.time=fmt(current); bases.nasa.redraw(); }
+    ['sst','chl','ssh','bait'].forEach(id=>{ if(overlays[id].layer) showBO(id); });
+    if(document.getElementById('cur').checked) showCurrents();
+  }
+  picker.addEventListener('change',()=>{current=new Date(picker.value+'T00:00:00Z');applyDate();});
+  document.getElementById('prev').onclick=()=>{current=new Date(+current-864e5);picker.value=fmt(current);applyDate();};
+  document.getElementById('next').onclick=()=>{const n=new Date(+current+864e5); if(n<=new Date()){current=n;picker.value=fmt(current);applyDate();}};
+
+  L.control.scale({imperial:true,metric:true}).addTo(map);
+
+  // ---------- click anywhere to read charted depth (ETOPO1 via backend) ----------
+  map.on('click', async (e)=>{
+    const lat=e.latlng.lat, lon=e.latlng.lng;
+    const pop=L.popup({maxWidth:220}).setLatLng(e.latlng).setContent('Reading depth…').openOn(map);
+    try{
+      const r=await fetch(`${BACKEND}/depth?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`);
+      const d=await r.json();
+      const pos=`<small>${lat.toFixed(3)}, ${lon.toFixed(3)}</small>`;
+      if(d.live && d.is_water){
+        pop.setContent(`<b>Depth</b><br><span style="font-size:15px">${d.depth_ft.toLocaleString()} ft</span>`+
+          ` &nbsp;·&nbsp; ${d.depth_fathoms} fathoms<br>${d.depth_m.toLocaleString()} m<br>${pos} · ETOPO1`);
+      } else if(d.live){
+        pop.setContent(`<b>Above sea level (land)</b><br>elev ${Math.round(-d.depth_m)} m<br>${pos}`);
+      } else {
+        pop.setContent('Depth unavailable — is the backend running?');
+      }
+    }catch(_){ pop.setContent('Depth unavailable — start the backend, then reload.'); }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# Render Blueprint — one free web service serving BOTH the API and the dashboard.
+# All files sit at the repo root (flat layout) so GitHub's web uploader works.
+services:
+  - type: web
+    name: offshore-sportfishing-intel
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true

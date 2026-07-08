@@ -1,0 +1,6 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+requests>=2.31
+numpy>=1.26
+matplotlib>=3.8
+pillow>=10.0
