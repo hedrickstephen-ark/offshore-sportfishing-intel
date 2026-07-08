@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Offshore Sportfishing Intel — Stuart, FL</title>
+<title>Offshore Sportfishing Intel</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet-velocity@1.7.0/dist/leaflet-velocity.min.css" />
 <style>
@@ -11,9 +11,9 @@
         --line:#26364f;--accent:#3fb6ff;--good:#4ade80;--bad:#ff6b6b}
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#05080f;color:var(--ink)}
-  #app{display:flex;height:100vh;overflow:hidden}
+  #app{display:flex;height:100vh;overflow:hidden;position:relative}
   #map{flex:1;height:100%;background:#05080f}
-  #panel{width:330px;min-width:330px;height:100%;overflow-y:auto;background:var(--panel);border-right:1px solid var(--line);padding:16px 16px 40px}
+  #panel{width:330px;min-width:330px;height:100%;overflow-y:auto;background:var(--panel);border-right:1px solid var(--line);padding:16px 16px 40px;position:relative;transition:width .26s ease, min-width .26s ease, transform .26s ease}
   h1{font-size:16px;margin:0 0 2px;letter-spacing:.2px}
   .sub{font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.4}
   .group{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px}
@@ -55,13 +55,88 @@
   .spot-tip{background:rgba(16,26,44,.82);border:1px solid #ff8c1a;color:#ffd9a8;font-size:10px;
     font-weight:600;padding:1px 5px;border-radius:4px;box-shadow:none;white-space:nowrap}
   .spot-tip:before{display:none !important}
+  /* launch "strong setup" flag pop-up */
+  #flag{position:absolute;top:16px;left:50%;transform:translateX(-50%);z-index:1200;display:none;
+    width:min(560px,86%);background:linear-gradient(180deg,#0e2438,#0b1a2c);border:1px solid var(--accent);
+    color:var(--ink);padding:14px 16px;border-radius:12px;box-shadow:0 10px 34px rgba(0,0,0,.55)}
+  #flag .flag-h{font-size:14px;font-weight:700;color:#eafaff;margin-bottom:2px}
+  #flag .flag-sub{font-size:12px;color:var(--muted);margin-bottom:6px}
+  #flag ul{margin:0;padding-left:18px;font-size:12px;line-height:1.45}
+  #flag li{margin:3px 0}
+  #flag .flag-foot{margin-top:9px;font-size:11px;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+  #flag .flag-x{cursor:pointer;color:var(--accent);font-weight:600}
+  .grade-badge{color:#05080f;font-weight:700;font-size:12px;padding:2px 8px;border-radius:6px}
+  .modes{display:flex;flex-wrap:wrap;gap:6px}
+  .modebtn{flex:1 1 45%;background:#0b1526;color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:6px 6px;font-size:11.5px;cursor:pointer}
+  .modebtn:hover{border-color:var(--accent)}
+  .modebtn.active{border-color:var(--accent);color:var(--accent);background:#0e2036}
+  .cfg{display:flex;align-items:center;gap:8px;margin:5px 0}
+  .cfg label{flex:1;font-size:12px;color:var(--muted)}
+  .cfg input{width:84px;background:#0b1526;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12px}
+  .wp{display:flex;justify-content:space-between;align-items:center;gap:6px;margin:3px 0;font-size:12px}
+  .wp .del{color:var(--bad);cursor:pointer;flex:none}
+  /* floating spot legend — pops up only when spots are on */
+  #spotlegend{position:absolute;top:12px;right:12px;z-index:1100;display:none;
+    background:rgba(11,21,38,.86);border:1px solid var(--line);border-radius:9px;
+    padding:8px 11px;font-size:11px;color:var(--muted);backdrop-filter:blur(3px);box-shadow:0 4px 16px rgba(0,0,0,.4)}
+  #spotlegend .lg-h{color:var(--ink);font-weight:600;font-size:11px;margin-bottom:5px;letter-spacing:.3px}
+  #spotlegend .lg-row{display:flex;align-items:center;gap:6px;margin:3px 0}
+  #spotlegend .lg-dot{width:9px;height:9px;border-radius:50%;flex:none}
+  /* spot names hidden until zoomed in close */
+  .spots-far .spot-tip{display:none !important}
+  /* ---- alive control panel: hover-rail / pin / full-screen ---- */
+  #paneltools{display:flex;justify-content:flex-end;gap:6px;margin-bottom:8px}
+  .ptbtn{background:#0b1526;color:var(--muted);border:1px solid var(--line);border-radius:6px;width:27px;height:24px;font-size:12px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center}
+  .ptbtn:hover{border-color:var(--accent);color:var(--accent)}
+  #rail{display:none;flex-direction:column;align-items:center;gap:14px;padding-top:12px;color:var(--muted)}
+  #rail .rail-i{font-size:18px}
+  #rail .rail-t{writing-mode:vertical-rl;transform:rotate(180deg);font-size:10px;letter-spacing:2px;opacity:.75}
+  #showBtn{display:none;position:absolute;top:12px;left:12px;z-index:1600;background:var(--panel);color:var(--ink);
+    border:1px solid var(--line);border-radius:8px;width:38px;height:34px;font-size:16px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.45)}
+  #showBtn:hover{border-color:var(--accent);color:var(--accent)}
+  /* alive: thin rail that expands on hover, overlaying the map (no map reflow) */
+  #app.alive #panel{position:absolute;left:0;top:0;height:100%;width:46px;min-width:46px;z-index:1500;overflow:hidden;box-shadow:2px 0 18px rgba(0,0,0,.5)}
+  #app.alive #panel:hover{width:330px;min-width:330px;overflow-y:auto}
+  #app.alive #panel:not(:hover) > *:not(#rail){display:none}
+  #app.alive #panel:not(:hover) #rail{display:flex}
+  /* hidden: full-screen map */
+  #app.hidden #panel{transform:translateX(-100%)}
+  #app.hidden #showBtn{display:block}
 </style>
 </head>
 <body>
 <div id="app">
   <div id="panel">
-    <h1>🎣 Offshore Sportfishing Intel</h1>
-    <div class="sub">US East Coast · satellite basemap with toggleable NOAA ocean layers. All free public data. Prototype — verify before running offshore.</div>
+    <div id="rail"><span class="rail-i">☰</span><span class="rail-t">CONTROLS</span></div>
+    <div id="paneltools">
+      <button class="ptbtn" id="collapseBtn" title="Collapse to hover-rail">◀</button>
+      <button class="ptbtn" id="hideBtn" title="Hide panel (full-screen map)">⛶</button>
+    </div>
+    <h1>Offshore Sportfishing Intel</h1>
+    <div class="sub">Satellite ocean intelligence. Overlays follow the map — pan or zoom and the data updates.</div>
+
+    <div class="group" id="readgroup">
+      <h2>Conditions read <span id="readtag" class="pill"></span></h2>
+      <div id="readbody" class="note">Reading conditions for this view…</div>
+    </div>
+
+    <div class="group">
+      <h2>Map tools</h2>
+      <div class="modes">
+        <button class="modebtn active" data-mode="info">ℹ︎ Point info</button>
+        <button class="modebtn" data-mode="measure">📏 Measure / trip</button>
+        <button class="modebtn" data-mode="mark">📍 Mark spot</button>
+        <button class="modebtn" data-mode="box">▧ Box of interest</button>
+      </div>
+      <div id="toolhint" class="note">Click the map to read depth + live conditions at that point (shows the layers you have on).</div>
+      <div id="tripcfg" style="display:none;margin-top:6px">
+        <div class="cfg"><label>Cruise speed (kn)</label><input type="number" id="cr_kn" value="33"></div>
+        <div class="cfg"><label>Fuel burn (gph)</label><input type="number" id="cr_gph" value="105"></div>
+        <div class="cfg"><label>Diesel ($/gal)</label><input type="number" id="cr_price" value="6.75" step="0.05"></div>
+      </div>
+      <div id="toolout" class="note" style="margin-top:6px"></div>
+      <div id="wplist" class="note"></div>
+    </div>
 
     <div class="group">
       <h2>Region</h2>
@@ -76,35 +151,34 @@
         <input type="date" id="datepick" />
         <button class="step" id="next">▶</button>
       </div>
-      <div class="note">SST/chlorophyll lag ~1–2 days; clouds leave gaps. Step back a day if a layer looks sparse.</div>
+      <div class="note">Imagery can lag a day or two. Step back if a layer looks sparse.</div>
     </div>
 
     <div class="group">
       <h2>Base map</h2>
-      <label class="radio"><input type="radio" name="base" value="esri" checked> Satellite — Esri (highest detail, cloud-free)</label>
-      <label class="radio"><input type="radio" name="base" value="clarity"> Satellite — Esri Clarity (sharper coastal)</label>
-      <label class="radio"><input type="radio" name="base" value="s2"> Satellite — Sentinel-2 cloudless (10 m)</label>
-      <label class="radio"><input type="radio" name="base" value="nasa"> Satellite — daily pass (NASA, shows clouds/weather)</label>
-      <label class="radio"><input type="radio" name="base" value="ocean"> Ocean / bathymetry — Esri</label>
-      <label class="radio"><input type="radio" name="base" value="dark"> Dark (minimal)</label>
-      <div class="note">Esri is the best free high-detail option (Google's tiles aren't free to overlay). Cloud-free mosaics have no weather; use the NASA daily pass to see today's clouds, sargassum and water color.</div>
+      <label class="radio"><input type="radio" name="base" value="esri" checked> Satellite — high detail</label>
+      <label class="radio"><input type="radio" name="base" value="clarity"> Satellite — sharper coastal</label>
+      <label class="radio"><input type="radio" name="base" value="s2"> Satellite — cloud-free</label>
+      <label class="radio"><input type="radio" name="base" value="nasa"> Daily true-color</label>
+      <label class="radio"><input type="radio" name="base" value="ocean"> Ocean / bathymetry</label>
+      <label class="radio"><input type="radio" name="base" value="dark"> Dark</label>
     </div>
 
     <div class="group">
       <h2>Bottom structure</h2>
       <div class="row">
         <span class="swatch" style="background:#6fd3ff"></span>
-        <label for="charts">Nautical charts (NOAA ENC)</label>
+        <label for="charts">Nautical charts</label>
         <span class="sw"><input type="checkbox" id="charts"><span class="track"></span><span class="thumb"></span></span>
       </div>
       <div class="op"><input type="range" min="0" max="100" value="85" id="charts_op"><small id="charts_v">85%</small></div>
       <div class="row">
         <span class="swatch" style="background:#7cc4ff"></span>
-        <label for="bathy">Depth contours (GEBCO)</label>
+        <label for="bathy">Depth contours</label>
         <span class="sw"><input type="checkbox" id="bathy"><span class="track"></span><span class="thumb"></span></span>
       </div>
       <div class="op"><input type="range" min="0" max="100" value="55" id="bathy_op"><small id="bathy_v">55%</small></div>
-      <div class="note">NOAA ENC shows charted depth contours, soundings and ledges — the bottom structure that funnels bait. Toggle down the SST layer to read it. <b>Click anywhere on the water</b> to read exact depth (ft / fathoms).</div>
+      <div class="note"><b>Click any water</b> to read exact depth (ft / fathoms).</div>
     </div>
 
     <div class="group">
@@ -113,82 +187,95 @@
       <div class="row">
         <span class="swatch" style="background:#ff4d4d"></span>
         <label for="sst">Sea surface temp</label>
-        <span class="sw"><input type="checkbox" id="sst" checked><span class="track"></span><span class="thumb"></span></span>
+        <span class="sw"><input type="checkbox" id="sst"><span class="track"></span><span class="thumb"></span></span>
       </div>
       <div class="op"><input type="range" min="0" max="100" value="75" id="sst_op"><small id="sst_v">75%</small></div>
 
       <div class="row">
         <span class="swatch" style="background:#8ed94f"></span>
-        <label for="chl">Chlorophyll (color/bait)</label>
+        <label for="chl">Chlorophyll (water color)</label>
         <span class="sw"><input type="checkbox" id="chl"><span class="track"></span><span class="thumb"></span></span>
       </div>
       <div class="op"><input type="range" min="0" max="100" value="75" id="chl_op"><small id="chl_v">75%</small></div>
 
       <div class="row">
         <span class="swatch" style="background:#e35d9c"></span>
-        <label for="ssh">Eddies (sea-surface height)</label>
+        <label for="ssh">Eddies</label>
         <span class="sw"><input type="checkbox" id="ssh"><span class="track"></span><span class="thumb"></span></span>
       </div>
       <div class="op"><input type="range" min="0" max="100" value="70" id="ssh_op"><small id="ssh_v">70%</small></div>
 
       <div class="row">
         <span class="swatch" style="background:#bfefff"></span>
-        <label for="cur">Currents (animated flow)</label>
-        <span class="sw"><input type="checkbox" id="cur" checked><span class="track"></span><span class="thumb"></span></span>
+        <label for="cur">Currents (animated)</label>
+        <span class="sw"><input type="checkbox" id="cur"><span class="track"></span><span class="thumb"></span></span>
       </div>
-      <div class="note">Currents render as smooth flowing motion so you can read the rips and edges of the Stream.</div>
+      <div class="row">
+        <span class="swatch" style="background:#ffb84d"></span>
+        <label for="ekman">Wind-driven currents</label>
+        <span class="sw"><input type="checkbox" id="ekman"><span class="track"></span><span class="thumb"></span></span>
+      </div>
+    </div>
+
+    <div class="group">
+      <h2>Wind &amp; upwelling</h2>
+      <div class="row">
+        <span class="swatch" style="background:#c9a9ff"></span>
+        <label for="wind">Surface wind (animated)</label>
+        <span class="sw"><input type="checkbox" id="wind"><span class="track"></span><span class="thumb"></span></span>
+      </div>
+      <div class="row">
+        <span class="swatch" style="background:#2c7fb8"></span>
+        <label for="upw">Upwelling</label>
+        <span class="sw"><input type="checkbox" id="upw"><span class="track"></span><span class="thumb"></span></span>
+      </div>
+      <div class="op"><input type="range" min="0" max="100" value="70" id="upw_op"><small id="upw_v">70%</small></div>
     </div>
 
     <div class="group">
       <h2>Derived intel</h2>
       <div class="row">
         <span class="swatch" style="background:#ff2d95"></span>
-        <label for="bait">Bait / edge finder</label>
+        <label for="bait">Edge finder</label>
         <span class="sw"><input type="checkbox" id="bait"><span class="track"></span><span class="thumb"></span></span>
       </div>
       <div class="op"><input type="range" min="0" max="100" value="85" id="bait_op"><small id="bait_v">85%</small></div>
-      <div class="note">Composite of SST fronts + chlorophyll edges + eddies. Bright pink = strongest edges = likeliest bait.</div>
+      <div class="note">Composite of temperature fronts, color edges and eddies. Brightest = strongest combined edges.</div>
     </div>
 
     <div class="group">
-      <h2>Fishing spots &amp; areas</h2>
+      <h2>Fishing spots</h2>
       <div class="row">
         <span class="swatch" style="background:#ff8c1a"></span>
-        <label for="spots">Named grounds, canyons &amp; wrecks</label>
+        <label for="spots">Show spots</label>
         <span class="sw"><input type="checkbox" id="spots" checked><span class="track"></span><span class="thumb"></span></span>
       </div>
-      <div class="note">Well-known offshore grounds for the selected region — canyons, lumps, shoals, reefs and inlets. Click a marker for detail. Charted place names also appear on the NOAA ENC layer.</div>
+      <div class="note">Dots mark known grounds. Zoom in to reveal names.</div>
     </div>
 
     <div class="group">
-      <h2>Markers &amp; zones</h2>
+      <h2>Markers</h2>
       <div class="row">
         <span class="swatch" style="background:#ffd000"></span>
-        <label for="buoys">NDBC buoys (live links)</label>
-        <span class="sw"><input type="checkbox" id="buoys" checked><span class="track"></span><span class="thumb"></span></span>
+        <label for="buoys">Buoys</label>
+        <span class="sw"><input type="checkbox" id="buoys"><span class="track"></span><span class="thumb"></span></span>
       </div>
       <div class="row">
         <span class="swatch" style="background:#00e0ff"></span>
-        <label for="aoi">Target area + inlet</label>
+        <label for="aoi">Inlet</label>
         <span class="sw"><input type="checkbox" id="aoi" checked><span class="track"></span><span class="thumb"></span></span>
       </div>
     </div>
 
-    <div class="group">
-      <h2>Legend</h2>
-      <div class="legend">
-        <strong>SST</strong> cool → warm<div class="bar sst-bar"></div>
-        <strong>Chlorophyll</strong> clear → green/bait<div class="bar chl-bar"></div>
-        <div class="note">Tight <em>temperature breaks</em> + <em>color edges</em> along the Gulf Stream = where bait and sailfish stack.</div>
-      </div>
-    </div>
-
     <div class="footer" id="srcline">
-      Sources: NASA GIBS · Esri Ocean · NOAA ENC charts · NOAA CoastWatch (SST/chl) · NOAA/NESDIS altimetry (SSH + currents) · GEBCO · ETOPO1 · NOAA NDBC. All free.
+      © 2026 Ark_Dev_Fin · Proprietary &amp; confidential. Unauthorized reproduction or reverse-engineering prohibited.
     </div>
   </div>
   <div id="map">
     <div id="banner"></div>
+    <div id="flag"></div>
+    <div id="spotlegend"></div>
+    <button id="showBtn" title="Show controls">☰</button>
   </div>
 </div>
 
@@ -196,20 +283,15 @@
 <script src="https://unpkg.com/leaflet-velocity@1.7.0/dist/leaflet-velocity.min.js"></script>
 <script>
 (function(){
-  // Deployed (served over http/https): the same server hosts the API -> same origin.
-  // Opened as a local file:// : talk to the local backend on port 8000.
-  const BACKEND = location.protocol.startsWith('http')
-      ? location.origin
-      : 'http://127.0.0.1:8000';
+  const BACKEND = '';   // same-origin: the API is served from wherever this page is hosted
 
-  // ---------- regions (add more here; the backend is fully bbox-driven) ----------
-  // oceanBounds = broad NOAA overlay coverage; aoiRect = rough target box.
+  // ---------- regions: bookmarks that recenter the map and swap the local
+  // spots / buoys / inlet. Overlays are NOT bound to a region box — they always
+  // cover the live map viewport (see refreshViewport). Add more freely.
   const REGIONS = {
     stuart: {
       name:'Stuart, FL (Treasure Coast)',
       center:[27.25,-79.75], zoom:9,
-      oceanBounds:[[25.7,-80.35],[28.6,-77.4]],
-      aoiRect:[[27.0,-80.1],[27.5,-79.4]],
       note:'Gulf Stream runs close — sailfish, mahi, wahoo, kingfish. The edge is often 10–25 mi out.',
       inlet:{name:'St. Lucie Inlet', lat:27.165, lon:-80.155},
       buoys:[
@@ -217,18 +299,10 @@
         ['41009',28.508,-80.185,'Canaveral 20NM'],
         ['LKWF1',26.613,-80.034,'Lake Worth Pier'],
       ],
-      spots:[
-        {n:'~120 ft Ledge', lat:27.19, lon:-80.10, t:'Structure ~5 mi off Stuart; funnels bait'},
-        {n:'Sailfish Alley (edge)', lat:27.22, lon:-79.85, t:'Troll the temp/color break, approx'},
-        {n:'Push Button Hill', lat:27.18, lon:-79.92, t:'Popular sailfish ground (approx)'},
-        {n:'Gulf Stream edge', lat:27.25, lon:-79.55, t:'Warm blue water; watch SST + chlorophyll break'},
-      ],
     },
     oceancity: {
       name:'Ocean City, MD',
       center:[38.05,-74.25], zoom:8,
-      oceanBounds:[[36.4,-75.4],[39.0,-72.0]],
-      aoiRect:[[37.6,-75.0],[38.5,-73.5]],
       note:'Canyons 50–70 nm out — tuna, white/blue marlin, mahi. Jackspot & lumps hold fish closer in.',
       inlet:{name:'Ocean City Inlet', lat:38.317, lon:-75.083},
       buoys:[
@@ -236,22 +310,19 @@
         ['44014',36.611,-74.842,'Virginia Beach 64NM'],
         ['44100',38.075,-74.840,'OC Nearshore (approx)'],
       ],
-      spots:[
-        {n:'Jackspot', lat:38.0867, lon:-74.7517, t:'Shoal ~20 mi out; early tuna, blues, marker for the run'},
-        {n:"Poor Man's Canyon", lat:38.05, lon:-74.03, t:'Closest canyon (~53 nm), approx tip'},
-        {n:'Baltimore Canyon', lat:38.245, lon:-73.843, t:'100-fathom tip; tuna / marlin / mahi'},
-        {n:'Washington Canyon', lat:37.487, lon:-74.508, t:'100-fathom tip; southern run'},
-        {n:'Wilmington Canyon', lat:38.388, lon:-73.540, t:'500-fathom tip; northern canyon'},
-      ],
     },
   };
   const DEFAULT_REGION = 'stuart';
   let region = DEFAULT_REGION;
-  let dataBounds = REGIONS[region].oceanBounds;      // updated by applyRegion()
   let aoiLayer=null, buoysLayer=null, spotsLayer=null;
 
-  const map = L.map('map',{minZoom:3,maxZoom:16,zoomControl:true})
+  // fractional zoom = smooth steps instead of doubling scale each level.
+  // zoomSnap .25 lets the map rest at quarter levels; zoomDelta .5 makes the
+  // +/- buttons & keyboard move a half level; wheel is near-continuous.
+  const map = L.map('map',{minZoom:3,maxZoom:19,zoomControl:true,
+      zoomSnap:0.25, zoomDelta:0.5, wheelPxPerZoomLevel:140, zoomAnimation:true})
     .setView(REGIONS[region].center, REGIONS[region].zoom);
+  map.attributionControl.setPrefix(false);   // drop the "Leaflet" credit; keep only the required basemap line
   const fmt = d => d.toISOString().slice(0,10);
   let current = new Date(Date.now() - 2*86400000);
 
@@ -264,24 +335,24 @@
     dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
       {subdomains:'abcd',maxZoom:19,attribution:'© CARTO'}),
     ocean: L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}',
-      {maxZoom:13,attribution:'Esri Ocean'}),
+      {maxNativeZoom:13,maxZoom:19,attribution:'Esri Ocean'}),
     esri: L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       {maxZoom:19,attribution:'Esri, Maxar, Earthstar Geographics'}),   // cloud-free mosaic
     clarity: L.tileLayer('https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       {maxZoom:19,attribution:'Esri Clarity, Maxar'}),
     s2: L.tileLayer('https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2023_3857/default/g/{z}/{y}/{x}.jpg',
-      {maxZoom:16,attribution:'Sentinel-2 cloudless 2023 — s2maps.eu by EOX (Copernicus)'}),
+      {maxNativeZoom:16,maxZoom:19,attribution:'Sentinel-2 cloudless 2023 — s2maps.eu by EOX (Copernicus)'}),
     nasa: null // GIBS daily true color, built per-date below
   };
   function gibs(layer,matrix,ext,maxNative){
     return L.tileLayer(`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layer}/default/{time}/${matrix}/{z}/{y}/{x}.${ext}`,
-      {time:fmt(current),maxNativeZoom:maxNative,maxZoom:12,tileSize:256,
+      {time:fmt(current),maxNativeZoom:maxNative,maxZoom:19,tileSize:256,
        bounds:[[-85,-180],[85,180]],attribution:'NASA GIBS'});
   }
   bases.nasa = gibs('VIIRS_SNPP_CorrectedReflectance_TrueColor','GoogleMapsCompatible_Level9','jpg',8);
   // Esri ocean reference labels (depth numbers) sit above ocean base
   const oceanRef = L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Reference/MapServer/tile/{z}/{y}/{x}',
-      {maxZoom:13,attribution:'Esri'});
+      {maxNativeZoom:13,maxZoom:19,attribution:'Esri'});
 
   let activeBase = bases.esri.addTo(map);
   function setBase(key){
@@ -297,26 +368,40 @@
 
   // ---------- bottom-structure tile overlays ----------
   const charts = L.tileLayer('https://tileservice.charts.noaa.gov/tiles/50000_1/{z}/{x}/{y}.png',
-      {maxZoom:18,opacity:0.85,attribution:'NOAA ENC'});
+      {maxNativeZoom:18,maxZoom:19,opacity:0.85,attribution:''});
   const bathy = L.tileLayer.wms('https://wms.gebco.net/mapserv?',
       {layers:'GEBCO_LATEST',format:'image/png',transparent:true,version:'1.3.0',
-       opacity:0.55,attribution:'GEBCO 2026'});
+       opacity:0.55,attribution:''});
 
-  // ---------- backend image overlays (SST / chl / ssh / composite) ----------
-  function bboxParams(){ const [[s,w],[n,e]]=dataBounds; return `s=${s}&w=${w}&n=${n}&e=${e}`; }
-  // no cache-buster: stable URL per date+region lets the browser cache tiles,
-  // so toggling a layer off/on is instant instead of re-fetching.
-  function boURL(path){ return `${BACKEND}/${path}?date=${fmt(current)}&${bboxParams()}`; }
+  // ---------- backend overlays, bound to the LIVE MAP VIEWPORT ----------
+  // The bbox sent to the backend is always the current map bounds, so overlays
+  // cover exactly what's on screen. On pan/zoom we refetch (debounced).
+  const MAX_SPAN=40;   // mirror the backend clamp so the image and its bounds match
+  function viewBBox(){
+    const b=map.getBounds();
+    let s=b.getSouth(), w=b.getWest(), n=b.getNorth(), e=b.getEast();
+    const cy=(s+n)/2, cx=(w+e)/2;
+    if(n-s>MAX_SPAN){ s=cy-MAX_SPAN/2; n=cy+MAX_SPAN/2; }
+    if(e-w>MAX_SPAN){ w=cx-MAX_SPAN/2; e=cx+MAX_SPAN/2; }
+    return {s:Math.max(-89,s), w:w, n:Math.min(89,n), e:e};
+  }
+  function bboxParams(bb){ return `s=${bb.s.toFixed(4)}&w=${bb.w.toFixed(4)}&n=${bb.n.toFixed(4)}&e=${bb.e.toFixed(4)}`; }
+  // date+bbox make a stable URL so the browser caches each rendered view.
+  function boURL(path, bb){ return `${BACKEND}/${path}?date=${fmt(current)}&${bboxParams(bb)}`; }
+
   const overlays = {};            // id -> {path, opacity, layer}
   function defBO(id,path,op){ overlays[id] = {path:path, opacity:op, layer:null}; }
   defBO('sst','sst.png',0.75);
   defBO('chl','chl.png',0.75);
   defBO('ssh','ssh.png',0.70);
   defBO('bait','composite.png',0.85);
+  defBO('upw','upwelling.png',0.70);
   function showBO(id){
     const o = overlays[id];
+    const bb = viewBBox();
+    const bounds = [[bb.s,bb.w],[bb.n,bb.e]];
     if(o.layer) map.removeLayer(o.layer);
-    o.layer = L.imageOverlay(boURL(o.path), dataBounds, {opacity:o.opacity});
+    o.layer = L.imageOverlay(boURL(o.path, bb), bounds, {opacity:o.opacity});
     setLoading(1);
     o.layer.on('load', ()=> setLoading(-1));
     o.layer.on('error', ()=>{ setLoading(-1); flagOffline(); showBanner(); });
@@ -324,26 +409,83 @@
   }
   function hideBO(id){ const o=overlays[id]; if(o.layer){map.removeLayer(o.layer);o.layer=null;} }
 
-  // ---------- animated currents (leaflet-velocity) ----------
-  let velocity = null;
-  function showCurrents(){
-    setLoading(1);
-    fetch(boURL('currents.json'))
+  // ---------- animated vector layers (leaflet-velocity): currents / ekman / wind ----------
+  const VEL = {
+    cur:   {path:'currents.json', type:'Geostrophic current', unit:'k/h', max:2.5,  scale:0.02,  colors:['#a9f6ff','#7fe0ff','#5cc8ff','#ffffff'], readout:true},
+    ekman: {path:'ekman.json',    type:'Wind-driven current', unit:'k/h', max:0.35, scale:0.12,  colors:['#ffe6a9','#ffd27f','#ffb84d','#ff9a2e'], readout:false},
+    wind:  {path:'wind.json',     type:'Surface wind',        unit:'m/s', max:22,   scale:0.006, colors:['#e7d9ff','#c9a9ff','#a97fff','#8a5cff'], readout:false},
+  };
+  const velLayers = {cur:null, ekman:null, wind:null};
+  function showVel(kind){
+    const cfg=VEL[kind]; setLoading(1);
+    fetch(boURL(cfg.path, viewBBox()))
       .then(r=>r.json()).then(data=>{
         setLoading(-1);
-        if(velocity) map.removeLayer(velocity);
-        velocity = L.velocityLayer({
-          displayValues:true,
-          displayOptions:{velocityType:'Current',position:'bottomleft',
-            emptyString:'No current data',speedUnit:'k/h',
-            displayPosition:'bottomleft',displayEmptyString:'No current data'},
-          data:data,
-          maxVelocity:2.5, velocityScale:0.02,
-          colorScale:['#a9f6ff','#7fe0ff','#5cc8ff','#ffffff']
+        if(velLayers[kind]) map.removeLayer(velLayers[kind]);
+        velLayers[kind] = L.velocityLayer({
+          displayValues:cfg.readout,
+          displayOptions:{velocityType:cfg.type, position:'bottomleft',
+            emptyString:'—', speedUnit:cfg.unit,
+            displayPosition:'bottomleft', displayEmptyString:'—'},
+          data:data, maxVelocity:cfg.max, velocityScale:cfg.scale, colorScale:cfg.colors
         }).addTo(map);
-      }).catch(()=>{ setLoading(-1); document.getElementById('cur').checked=false; flagOffline(); showBanner(); });
+      }).catch(()=>{ setLoading(-1); const el=document.getElementById(kind); if(el) el.checked=false; flagOffline(); showBanner(); });
   }
-  function hideCurrents(){ if(velocity){map.removeLayer(velocity);velocity=null;} }
+  function hideVel(kind){ if(velLayers[kind]){map.removeLayer(velLayers[kind]);velLayers[kind]=null;} }
+
+  // ---------- refetch all active overlays when the viewport changes ----------
+  let moveTimer=null;
+  function refreshViewport(){
+    ['sst','chl','ssh','bait','upw'].forEach(id=>{ if(overlays[id].layer) showBO(id); });
+    Object.keys(velLayers).forEach(k=>{ if(velLayers[k]) showVel(k); });
+    updateRead();
+  }
+  map.on('moveend', ()=>{ clearTimeout(moveTimer); moveTimer=setTimeout(refreshViewport, 550); });
+
+  // ---------- conditions read ("why it's fishing here today") ----------
+  function gradeColor(g){ return g==='Strong'?'#4ade80':g==='Moderate'?'#7fe0ff':g==='Light'?'#ffcf6b':'#93a4bd'; }
+  function fetchReport(bb, ref){
+    let u=boURL('report', bb);
+    if(ref) u+=`&ref_lat=${ref[0]}&ref_lon=${ref[1]}`;
+    return fetch(u).then(r=>r.json());
+  }
+  function renderRead(d){
+    const tag=document.getElementById('readtag');
+    tag.textContent = d.data==='live' ? '● live' : '● modeled';
+    tag.style.color = d.data==='live' ? 'var(--good)' : '#ffcf6b';
+    const gc=gradeColor(d.grade);
+    document.getElementById('readbody').innerHTML =
+      `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+         <span class="grade-badge" style="background:${gc}">${d.grade} · ${d.index}</span>
+         <span style="font-size:12px;color:var(--ink)">${d.headline}</span></div>`
+      + '<ul style="margin:4px 0 0;padding-left:16px;line-height:1.42;font-size:12px">'
+      + d.bullets.map(b=>`<li style="margin:3px 0">${b}</li>`).join('') + '</ul>';
+  }
+  function updateRead(){
+    fetchReport(viewBBox())
+      .then(renderRead)
+      .catch(()=>{ document.getElementById('readbody').textContent =
+        'Conditions unavailable — start the backend, then reload.'; });
+  }
+
+  // ---------- Stuart launch flag: pop up only on a strong setup ----------
+  const flag=document.getElementById('flag');
+  function showFlag(d){
+    flag.innerHTML =
+      `<div class="flag-h">Notable ocean structure — Stuart area <span class="grade-badge" style="background:${gradeColor(d.grade)}">${d.grade} · ${d.index}</span></div>`
+      + `<div class="flag-sub">${d.headline}</div>`
+      + '<ul>'+d.bullets.slice(0,3).map(b=>`<li>${b}</li>`).join('')+'</ul>'
+      + `<div class="flag-foot"><span>${d.data==='live'?'Live read':'Modeled — start backend for live data'}</span><span class="flag-x">Dismiss ✕</span></div>`;
+    flag.style.display='block';
+    flag.querySelector('.flag-x').onclick=()=>{ flag.style.display='none'; };
+  }
+  function stuartFlag(){
+    const bb={s:26.6, w:-80.3, n:27.9, e:-79.2};   // Stuart offshore box
+    const inlet=REGIONS.stuart.inlet;
+    fetchReport(bb, inlet?[inlet.lat,inlet.lon]:null)
+      .then(d=>{ if(d.strong && d.data==='live') showFlag(d); })   // real setups only, never modeled
+      .catch(()=>{});
+  }
 
   // ---------- backend health + offline banner ----------
   const bk = document.getElementById('bkstatus');
@@ -364,7 +506,7 @@
     else if(online){ bk.textContent='● backend online'; bk.style.color='var(--good)'; }
   }
   fetch(BACKEND+'/health').then(r=>r.ok?r.json():Promise.reject())
-    .then(()=>flagOnline())
+    .then(()=>{ flagOnline(); updateRead(); stuartFlag(); })
     .catch(()=>{ flagOffline(); showBanner(); });
 
   // ---------- generic toggle + opacity wiring ----------
@@ -388,18 +530,17 @@
   onOpacity('bathy_op',v=>bathy.setOpacity(v));
 
   // backend rasters
-  ['sst','chl','ssh','bait'].forEach(id=>{
+  ['sst','chl','ssh','bait','upw'].forEach(id=>{
     onToggle(id,()=>showBO(id),()=>hideBO(id));
     onOpacity(id+'_op',v=>{ overlays[id].opacity=v; if(overlays[id].layer) overlays[id].layer.setOpacity(v); });
   });
 
-  // currents
-  onToggle('cur',showCurrents,hideCurrents);
+  // animated vector layers (geostrophic currents, wind-driven currents, wind)
+  ['cur','ekman','wind'].forEach(k=> onToggle(k, ()=>showVel(k), ()=>hideVel(k)) );
 
   // ---------- region-driven markers / buoys / fishing spots ----------
   function buildAOI(reg){
-    const items=[ L.rectangle(reg.aoiRect,{color:'#00e0ff',weight:1.5,fill:false,dashArray:'5,5'})
-        .bindPopup(`<b>${reg.name}</b><br>Rough target area. Ocean overlays extend beyond this box.`) ];
+    const items=[];
     if(reg.inlet) items.push(
       L.marker([reg.inlet.lat,reg.inlet.lon]).bindPopup(`<b>${reg.inlet.name}</b><br>Run out from here.`));
     return L.layerGroup(items);
@@ -407,29 +548,45 @@
   function buildBuoys(reg){
     return L.layerGroup((reg.buoys||[]).map(([id,lat,lon,name])=>
       L.circleMarker([lat,lon],{radius:6,color:'#ffd000',weight:2,fillColor:'#ffd000',fillOpacity:.5})
-        .bindPopup(`<b>NDBC ${id}</b> — ${name}<br><a href="https://www.ndbc.noaa.gov/station_page.php?station=${id}" target="_blank">Live wind/wave/water temp ▸</a>`)));
+        .bindPopup(`<b>Buoy ${id}</b> — ${name}<br><a href="https://www.ndbc.noaa.gov/station_page.php?station=${id}" target="_blank">Live conditions ▸</a>`)));
   }
-  function buildSpots(reg){
-    return L.layerGroup((reg.spots||[]).map(s=>
-      L.circleMarker([s.lat,s.lon],{radius:5,color:'#ff8c1a',weight:2,fillColor:'#ffb84d',fillOpacity:.9})
+  // spots come from the backend (/spots) so they stay out of the client source
+  let SPOTS_DATA=null;
+  function buildSpots(key){
+    const g=L.layerGroup();
+    if(!SPOTS_DATA || !SPOTS_DATA.regions[key]) return g;
+    const cats=SPOTS_DATA.categories;
+    SPOTS_DATA.regions[key].forEach(s=>{
+      const col=(cats[s.cat]||{}).color||'#ff8c1a';
+      L.circleMarker([s.lat,s.lon],{radius:5,color:col,weight:2,fillColor:col,fillOpacity:.85})
         .bindTooltip(s.n,{permanent:true,direction:'right',className:'spot-tip',offset:[6,0]})
-        .bindPopup(`<b>${s.n}</b><br>${s.t||''}<br><small>${s.lat.toFixed(3)}, ${s.lon.toFixed(3)}</small>`)));
+        .bindPopup(`<b>${s.n}</b><br>${s.t||''}${s.approx?' <span style="color:#ffcf6b">(approx — verify)</span>':''}`
+          +`<br><small>${s.lat.toFixed(3)}, ${s.lon.toFixed(3)} · ${(cats[s.cat]||{}).label||''}</small>`)
+        .addTo(g);
+    });
+    return g;
   }
+  function renderSpotLegend(cats){
+    const el=document.getElementById('spotlegend'); if(!el||!cats) return;
+    el.innerHTML='<div class="lg-h">Fishing spots</div>'
+      + Object.values(cats).map(c=>`<div class="lg-row"><span class="lg-dot" style="background:${c.color}"></span>${c.label}</div>`).join('');
+  }
+  function showSpotLegend(on){ const el=document.getElementById('spotlegend'); if(el) el.style.display = on?'block':'none'; }
+  // spot names appear only when zoomed in close
+  const SPOT_LABEL_ZOOM=10.5;
+  function updateSpotZoom(){ map.getContainer().classList.toggle('spots-far', map.getZoom() < SPOT_LABEL_ZOOM); }
+  map.on('zoomend', updateSpotZoom);
 
-  function applyRegion(key, reload){
+  function applyRegion(key, recenter){
     region=key; const reg=REGIONS[key];
-    dataBounds=reg.oceanBounds;
     document.getElementById('regnote').textContent=reg.note;
     [aoiLayer,buoysLayer,spotsLayer].forEach(l=>{ if(l&&map.hasLayer(l)) map.removeLayer(l); });
-    aoiLayer=buildAOI(reg); buoysLayer=buildBuoys(reg); spotsLayer=buildSpots(reg);
+    aoiLayer=buildAOI(reg); buoysLayer=buildBuoys(reg); spotsLayer=buildSpots(key);
     if(document.getElementById('aoi').checked)   aoiLayer.addTo(map);
     if(document.getElementById('buoys').checked) buoysLayer.addTo(map);
     if(document.getElementById('spots').checked) spotsLayer.addTo(map);
-    map.setView(reg.center, reg.zoom);
-    if(reload){
-      ['sst','chl','ssh','bait'].forEach(id=>{ if(overlays[id].layer) showBO(id); });
-      if(document.getElementById('cur').checked) showCurrents();
-    }
+    // recenter fires 'moveend', which refetches every active overlay for the new view
+    if(recenter) map.setView(reg.center, reg.zoom);
   }
 
   // region dropdown
@@ -441,15 +598,28 @@
   // marker toggles (applyRegion does the initial placement per checkbox)
   document.getElementById('aoi').addEventListener('change',  e=> e.target.checked?aoiLayer.addTo(map):map.removeLayer(aoiLayer));
   document.getElementById('buoys').addEventListener('change',e=> e.target.checked?buoysLayer.addTo(map):map.removeLayer(buoysLayer));
-  document.getElementById('spots').addEventListener('change',e=> e.target.checked?spotsLayer.addTo(map):map.removeLayer(spotsLayer));
+  document.getElementById('spots').addEventListener('change',e=>{
+    if(e.target.checked){ spotsLayer.addTo(map); showSpotLegend(true); }
+    else { map.removeLayer(spotsLayer); showSpotLegend(false); }
+  });
 
   applyRegion(DEFAULT_REGION, false);   // build + place initial region layers
+
+  // load named grounds from the backend, then draw them + the legend
+  fetch(`${BACKEND}/spots`).then(r=>r.json()).then(d=>{
+    SPOTS_DATA=d; renderSpotLegend(d.categories);
+    if(spotsLayer && map.hasLayer(spotsLayer)) map.removeLayer(spotsLayer);
+    spotsLayer=buildSpots(region);
+    const on=document.getElementById('spots').checked;
+    if(on) spotsLayer.addTo(map);
+    showSpotLegend(on);
+    updateSpotZoom();
+  }).catch(()=>{});
 
   // ---------- date change: refresh everything time-dependent ----------
   function applyDate(){
     if(map.hasLayer(bases.nasa)){ bases.nasa.options.time=fmt(current); bases.nasa.redraw(); }
-    ['sst','chl','ssh','bait'].forEach(id=>{ if(overlays[id].layer) showBO(id); });
-    if(document.getElementById('cur').checked) showCurrents();
+    refreshViewport();   // reload every active overlay/vector layer for the new date
   }
   picker.addEventListener('change',()=>{current=new Date(picker.value+'T00:00:00Z');applyDate();});
   document.getElementById('prev').onclick=()=>{current=new Date(+current-864e5);picker.value=fmt(current);applyDate();};
@@ -457,24 +627,140 @@
 
   L.control.scale({imperial:true,metric:true}).addTo(map);
 
-  // ---------- click anywhere to read charted depth (ETOPO1 via backend) ----------
-  map.on('click', async (e)=>{
-    const lat=e.latlng.lat, lon=e.latlng.lng;
-    const pop=L.popup({maxWidth:220}).setLatLng(e.latlng).setContent('Reading depth…').openOn(map);
+  // ================= Map tools: info HUD · measure/trip · mark · box =================
+  const NM=(a,b)=>{ const R=3440.065, p1=a.lat*Math.PI/180, p2=b.lat*Math.PI/180;
+    const dp=(b.lat-a.lat)*Math.PI/180, dl=(b.lng-a.lng)*Math.PI/180;
+    const h=Math.sin(dp/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+    return R*2*Math.asin(Math.min(1,Math.sqrt(h))); };
+  const BRG=(a,b)=>{ const y=Math.sin((b.lng-a.lng)*Math.PI/180)*Math.cos(b.lat*Math.PI/180);
+    const x=Math.cos(a.lat*Math.PI/180)*Math.sin(b.lat*Math.PI/180)-Math.sin(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.cos((b.lng-a.lng)*Math.PI/180);
+    const d=(Math.atan2(y,x)*180/Math.PI+360)%360;
+    return {deg:Math.round(d), c:["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"][Math.round(d/22.5)%16]}; };
+  const on = id => { const el=document.getElementById(id); return el && el.checked; };
+
+  let toolMode='info';
+  const hint=document.getElementById('toolhint'), tripcfg=document.getElementById('tripcfg'), toolout=document.getElementById('toolout');
+  const HINTS={ info:'Click the map to read depth + live conditions at that point (shows the layers you have on).',
+    measure:'Click points to lay a route. Distance, heading, run time and fuel update below.',
+    mark:'Click to save a waypoint. Saved spots persist on this computer.',
+    box:'Drag on the map to draw a box of interest — you get a conditions read for it.' };
+  document.querySelectorAll('.modebtn').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('.modebtn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); toolMode=b.dataset.mode; hint.textContent=HINTS[toolMode];
+    tripcfg.style.display = toolMode==='measure'?'block':'none';
+    map.dragging[toolMode==='box'?'disable':'enable']();
+    if(toolMode!=='measure') clearMeasure();
+    toolout.innerHTML = toolMode==='measure'?tripSummary():'';
+  }));
+
+  // ---- info HUD ----
+  function row(l,v){ return `<div style="display:flex;justify-content:space-between;gap:10px"><span style="color:var(--muted)">${l}</span><b>${v}</b></div>`; }
+  async function infoClick(e){
+    const lat=e.latlng.lat, lon=e.latlng.lng, pos=`<small>${lat.toFixed(3)}, ${lon.toFixed(3)}</small>`;
+    const pop=L.popup({maxWidth:250}).setLatLng(e.latlng).setContent('Reading conditions…').openOn(map);
     try{
-      const r=await fetch(`${BACKEND}/depth?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`);
-      const d=await r.json();
-      const pos=`<small>${lat.toFixed(3)}, ${lon.toFixed(3)}</small>`;
-      if(d.live && d.is_water){
-        pop.setContent(`<b>Depth</b><br><span style="font-size:15px">${d.depth_ft.toLocaleString()} ft</span>`+
-          ` &nbsp;·&nbsp; ${d.depth_fathoms} fathoms<br>${d.depth_m.toLocaleString()} m<br>${pos} · ETOPO1`);
-      } else if(d.live){
-        pop.setContent(`<b>Above sea level (land)</b><br>elev ${Math.round(-d.depth_m)} m<br>${pos}`);
-      } else {
-        pop.setContent('Depth unavailable — is the backend running?');
-      }
-    }catch(_){ pop.setContent('Depth unavailable — start the backend, then reload.'); }
+      const d=await fetch(`${BACKEND}/point?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}&date=${fmt(current)}`).then(r=>r.json());
+      let s=''; const dp=d.depth||{};
+      if(dp.live && dp.is_water) s+=row('Depth', `${dp.depth_ft.toLocaleString()} ft · ${dp.depth_fathoms} fath`);
+      else if(dp.live) s+=row('Land', `${Math.round(-dp.depth_m)} m elev`);
+      if(on('sst') && d.sst_f!=null) s+=row('SST', `${d.sst_f}°F`);
+      if(on('chl') && d.chl_mg_m3!=null) s+=row('Chlorophyll', `${d.chl_mg_m3} mg/m³`);
+      if(on('ssh') && d.ssh_m!=null) s+=row('SSH / eddy', `${d.ssh_m>=0?'+':''}${d.ssh_m} m · ${d.eddy||''}`);
+      if(on('cur') && d.current_kt!=null) s+=row('Current', `${d.current_kt} kt → ${d.current_toward}`);
+      if(on('ekman') && d.ekman_kt!=null) s+=row('Wind-driven', `${d.ekman_kt} kt → ${d.ekman_toward}`);
+      if(on('wind') && d.wind_kt!=null) s+=row('Wind', `${d.wind_kt} kt from ${d.wind_from}`);
+      if(on('upw') && d.upwelling) s+=row('Upwelling', d.upwelling);
+      pop.setContent(`<b>Conditions here</b>${s||'<div><i>Toggle layers on to see their values.</i></div>'}<div style="margin-top:4px">${pos}</div>`);
+    }catch(_){ pop.setContent('Unavailable — start the backend, then reload.'); }
+  }
+
+  // ---- measure / trip + fuel (≈60 ft Viking defaults, editable) ----
+  let measurePts=[], measureLine=null, measureDots=[];
+  function clearMeasure(){ if(measureLine){map.removeLayer(measureLine);measureLine=null;} measureDots.forEach(m=>map.removeLayer(m)); measureDots=[]; measurePts=[]; }
+  function boat(){ return {kn:+document.getElementById('cr_kn').value||1, gph:+document.getElementById('cr_gph').value||0, price:+document.getElementById('cr_price').value||0}; }
+  function hm(h){ const m=Math.round(h*60); return (m>=60?Math.floor(m/60)+'h ':'')+(m%60)+'m'; }
+  function tripSummary(){
+    if(measurePts.length<2) return '<span style="color:#5a6b85">Click two or more points to measure a run.</span>';
+    let dist=0; for(let i=1;i<measurePts.length;i++) dist+=NM(measurePts[i-1],measurePts[i]);
+    const b=BRG(measurePts[0], measurePts[measurePts.length-1]), c=boat(), hrs=dist/c.kn, gal=hrs*c.gph;
+    const $=g=>'$'+Math.round(g*c.price).toLocaleString();
+    return `<b>${dist.toFixed(1)} nm</b> · heading ${b.deg}° ${b.c}<br>`
+      +`Run @ ${c.kn} kn: <b>${hm(hrs)}</b> one-way · ${hm(hrs*2)} round-trip<br>`
+      +`Fuel: ${Math.round(gal)} gal (<b>${$(gal)}</b>) one-way · ${Math.round(gal*2)} gal (<b>${$(gal*2)}</b>) round<br>`
+      +`<span style="color:#5a6b85">Editable estimates, ~60 ft Viking. <span id="mclr" style="color:var(--accent);cursor:pointer">reset route</span></span>`;
+  }
+  function refreshTrip(){ toolout.innerHTML=tripSummary(); const c=document.getElementById('mclr'); if(c) c.onclick=()=>{clearMeasure();refreshTrip();}; }
+  function measureClick(e){
+    measurePts.push(e.latlng);
+    measureDots.push(L.circleMarker(e.latlng,{radius:4,color:'#00e0ff',weight:2,fillColor:'#00e0ff',fillOpacity:.9}).addTo(map));
+    if(measureLine) map.removeLayer(measureLine);
+    measureLine=L.polyline(measurePts,{color:'#00e0ff',weight:2,dashArray:'6,4'}).addTo(map);
+    refreshTrip();
+  }
+  ['cr_kn','cr_gph','cr_price'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{ if(toolMode==='measure') refreshTrip(); }));
+
+  // ---- mark / saved waypoints (persist on this computer) ----
+  let waypoints=[]; const wpLayer=L.layerGroup().addTo(map);
+  try{ waypoints=JSON.parse(localStorage.getItem('osi_wp')||'[]'); }catch(_){ waypoints=[]; }
+  function saveWP(){ try{ localStorage.setItem('osi_wp',JSON.stringify(waypoints)); }catch(_){ } }
+  function renderWP(){
+    wpLayer.clearLayers();
+    waypoints.forEach(w=> L.marker([w.lat,w.lon]).addTo(wpLayer)
+      .bindPopup(`<b>${w.name}</b><br><small>${w.lat.toFixed(3)}, ${w.lon.toFixed(3)}</small>`));
+    const list=document.getElementById('wplist');
+    list.innerHTML = waypoints.length ? '<div style="margin-top:6px;color:#5a6b85">Saved spots:</div>'
+      + waypoints.map((w,i)=>`<div class="wp"><span>📍 ${w.name} <span style="color:#5a6b85">${w.lat.toFixed(2)}, ${w.lon.toFixed(2)}</span></span><span class="del" data-i="${i}">✕</span></div>`).join('') : '';
+    list.querySelectorAll('.del').forEach(x=>x.onclick=()=>{ waypoints.splice(+x.dataset.i,1); saveWP(); renderWP(); });
+  }
+  function markClick(e){
+    const name=prompt('Name this spot:', `Spot ${waypoints.length+1}`);
+    if(name===null) return;
+    waypoints.push({name:name||`Spot ${waypoints.length+1}`, lat:e.latlng.lat, lon:e.latlng.lng});
+    saveWP(); renderWP();
+  }
+  renderWP();
+
+  // ---- box of interest (drag to draw; reports conditions for the box) ----
+  let boxRect=null, boxStart=null, boxing=false;
+  map.on('mousedown',e=>{ if(toolMode!=='box')return; boxing=true; boxStart=e.latlng; if(boxRect){map.removeLayer(boxRect);boxRect=null;} });
+  map.on('mousemove',e=>{ if(!boxing)return; const b=L.latLngBounds(boxStart,e.latlng);
+    if(boxRect) boxRect.setBounds(b); else boxRect=L.rectangle(b,{color:'#ffd000',weight:1.5,dashArray:'5,5',fillOpacity:.06}).addTo(map); });
+  map.on('mouseup',async e=>{ if(!boxing)return; boxing=false; if(!boxRect)return;
+    const b=boxRect.getBounds(), s=b.getSouth(), w=b.getWest(), n=b.getNorth(), ee=b.getEast();
+    const wide=NM(b.getSouthWest(),b.getSouthEast()), tall=NM(b.getSouthWest(),b.getNorthWest());
+    toolout.innerHTML=`Box ${wide.toFixed(0)}×${tall.toFixed(0)} nm — reading…`;
+    try{
+      const d=await fetch(`${BACKEND}/report?date=${fmt(current)}&s=${s}&w=${w}&n=${n}&e=${ee}`).then(r=>r.json());
+      toolout.innerHTML=`<b>Box read — ${d.grade} (${d.index})</b><br>${d.headline}`
+        +'<ul style="margin:4px 0;padding-left:16px">'+d.bullets.slice(0,3).map(x=>`<li>${x}</li>`).join('')+'</ul>'
+        +`<span id="boxzoom" style="color:var(--accent);cursor:pointer">zoom to box</span> · <span id="boxclr" style="color:var(--bad);cursor:pointer">clear</span>`;
+      document.getElementById('boxzoom').onclick=()=>map.fitBounds(b);
+      document.getElementById('boxclr').onclick=()=>{ if(boxRect){map.removeLayer(boxRect);boxRect=null;} toolout.innerHTML=''; };
+    }catch(_){ toolout.innerHTML='Box read unavailable — is the backend running?'; }
   });
+
+  // ---- click dispatcher ----
+  map.on('click',(e)=>{
+    if(toolMode==='info') infoClick(e);
+    else if(toolMode==='measure') measureClick(e);
+    else if(toolMode==='mark') markClick(e);
+  });
+
+  // ---- alive control panel: pinned / hover-rail / full-screen ----
+  const appEl=document.getElementById('app');
+  function panelRelayout(){ setTimeout(()=>map.invalidateSize(),300); }   // let leaflet re-fit after the width transition
+  function setPanel(state){
+    appEl.classList.remove('alive','hidden');
+    if(state==='alive') appEl.classList.add('alive');
+    else if(state==='hidden') appEl.classList.add('hidden');
+    document.getElementById('collapseBtn').textContent = appEl.classList.contains('alive') ? '▶' : '◀';
+    try{ localStorage.setItem('osi_panel', state); }catch(_){}
+    panelRelayout();
+  }
+  document.getElementById('collapseBtn').onclick=()=> setPanel(appEl.classList.contains('alive')?'pinned':'alive');
+  document.getElementById('hideBtn').onclick=()=> setPanel('hidden');
+  document.getElementById('showBtn').onclick=()=> setPanel('pinned');
+  try{ const st=localStorage.getItem('osi_panel'); if(st && st!=='pinned') setPanel(st); }catch(_){}
 })();
 </script>
 </body>
