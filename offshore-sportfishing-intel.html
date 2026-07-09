@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Offshore Sportfishing Intel</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet-velocity@1.7.0/dist/leaflet-velocity.min.css" />
@@ -102,6 +102,31 @@
   /* hidden: full-screen map */
   #app.hidden #panel{transform:translateX(-100%)}
   #app.hidden #showBtn{display:block}
+  /* ---- mobile: the panel becomes a slide-over drawer above the map ---- */
+  @media (max-width:768px){
+    #app{height:100dvh}
+    #panel{position:absolute;left:0;top:0;height:100%;width:min(330px,86vw);min-width:0;z-index:1500;
+      box-shadow:2px 0 24px rgba(0,0,0,.6);
+      padding-top:calc(16px + env(safe-area-inset-top));
+      padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+    #collapseBtn{display:none}                 /* hover-rail needs a mouse */
+    .ptbtn{width:36px;height:32px;font-size:14px}
+    #showBtn{width:46px;height:42px;font-size:18px;top:calc(12px + env(safe-area-inset-top))}
+    .modebtn{padding:10px 6px;font-size:12.5px}
+    .row{margin:11px 0}
+    .row label{font-size:14px}
+    .radio{margin:10px 0;font-size:14px}
+    input[type=range]{height:28px}
+    .sw{width:46px;height:26px}
+    .thumb{width:20px;height:20px}
+    .sw input:checked ~ .thumb{transform:translateX(20px)}
+    button.step{padding:8px 12px;font-size:14px}
+    .date input{padding:8px 7px;font-size:14px}
+    #banner{max-width:92%;top:calc(12px + env(safe-area-inset-top))}
+    #flag{width:min(560px,92%);top:calc(16px + env(safe-area-inset-top))}
+    #spotlegend{top:calc(12px + env(safe-area-inset-top));font-size:10px;padding:6px 9px}
+    .leaflet-control-zoom{margin-top:calc(64px + env(safe-area-inset-top)) !important}
+  }
 </style>
 </head>
 <body>
@@ -760,7 +785,11 @@
   document.getElementById('collapseBtn').onclick=()=> setPanel(appEl.classList.contains('alive')?'pinned':'alive');
   document.getElementById('hideBtn').onclick=()=> setPanel('hidden');
   document.getElementById('showBtn').onclick=()=> setPanel('pinned');
-  try{ const st=localStorage.getItem('osi_panel'); if(st && st!=='pinned') setPanel(st); }catch(_){}
+  // mobile: start with a full-screen map — the ☰ button opens the drawer.
+  // (the hover-rail "alive" mode needs a mouse, so it's never restored on touch.)
+  const isMobile = window.matchMedia('(max-width:768px)').matches;
+  if(isMobile){ setPanel('hidden'); }
+  else { try{ const st=localStorage.getItem('osi_panel'); if(st && st!=='pinned') setPanel(st); }catch(_){} }
 })();
 </script>
 </body>
