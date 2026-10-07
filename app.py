@@ -1025,6 +1025,17 @@ SPOTS = {
         {"n": "Lindenkohl Canyon", "lat": 38.65, "lon": -73.30, "cat": "canyon", "t": "Northern canyon", "approx": True},
         {"n": "Carteret Canyon", "lat": 38.80, "lon": -73.10, "cat": "canyon", "t": "Far northern run", "approx": True},
     ],
+    "cabo": [
+        {"n": "Cabo San Lucas Marina", "lat": 22.879, "lon": -109.906, "cat": "inlet", "t": "Main run-out; the Arch is right outside"},
+        {"n": "San Jose del Cabo Marina", "lat": 23.053, "lon": -109.692, "cat": "inlet", "t": "East-cape run-out", "approx": True},
+        {"n": "The Pozo (Cabo Canyon)", "lat": 22.85, "lon": -109.90, "cat": "canyon", "t": "Submarine canyon right off the Arch; marlin close in", "approx": True},
+        {"n": "Gordo Banks (Inner)", "lat": 23.02, "lon": -109.63, "cat": "lump", "t": "Seamount off San Jose; cow tuna + blue/black marlin", "approx": True},
+        {"n": "Gordo Banks (Outer)", "lat": 22.97, "lon": -109.55, "cat": "lump", "t": "Deeper seamount; trophy marlin & tuna", "approx": True},
+        {"n": "San Jaime Bank", "lat": 22.70, "lon": -110.10, "cat": "lump", "t": "Pacific bank SW of Cabo Falso; blue/black marlin", "approx": True},
+        {"n": "Golden Gate Bank", "lat": 23.05, "lon": -110.10, "cat": "lump", "t": "Pacific bank ~15 mi NW; striped + blue marlin", "approx": True},
+        {"n": "Finger Bank", "lat": 23.47, "lon": -110.52, "cat": "lump", "t": "~50 mi NW, deep offshore; big-marlin run", "approx": True},
+        {"n": "Jaime Bank / Cabo Falso", "lat": 22.87, "lon": -109.95, "cat": "edge", "t": "Dropoff off the lighthouse point", "approx": True},
+    ],
 }
 
 
