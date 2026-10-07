@@ -592,7 +592,8 @@
       const col=(cats[s.cat]||{}).color||'#ff8c1a';
       L.circleMarker([s.lat,s.lon],{radius:5,color:col,weight:2,fillColor:col,fillOpacity:.85})
         .bindTooltip(s.n,{permanent:true,direction:'right',className:'spot-tip',offset:[6,0]})
-        .bindPopup(`<b>${s.n}</b><br>${s.t||''}${s.approx?' <span style="color:#ffcf6b">(approx — verify)</span>':''}`
+        .bindPopup(`<b>${s.n}</b>${s.fish?`<br><span style="color:#7fe0ff">🎣 ${s.fish}</span>`:''}`
+          +`<br>${s.t||''}${s.approx?' <span style="color:#ffcf6b">(approx — verify)</span>':''}`
           +`<br><small>${s.lat.toFixed(3)}, ${s.lon.toFixed(3)} · ${(cats[s.cat]||{}).label||''}</small>`)
         .addTo(g);
     });
